@@ -16,9 +16,9 @@ output:
 
 
 ```{r, include=FALSE}
-# Don't delete this chunk if you are using the mosaic package
-# This loads the mosaic and dplyr packages
 require(mosaic)
+require(rvest)
+require(readr)
 ```
 
 ```{r, include=FALSE}
@@ -33,10 +33,75 @@ opts_chunk$set(
   tidy=FALSE,     # display code as typed
   size="small"    # slightly smaller font for code
 )
-
-```{r, include=FALSE}
-# Load additional packages here.  Uncomment the line below to use Project MOSAIC data sets.
-# require(mosaicData)   
 ```
 
+```{r, error=FALSE}
+url <- "http://www.kids-in-mind.com/cgi-bin/listbyrating/search.pl?query=&stpos=0&stype=AND&s1=0&s2=10&v1=0&v2=10&p1=0&p2=10&m=1&m=2&m=3&m=4"
+webpage <- read_html(url)
+string <- webpage %>%
+  html_nodes(".t11normal+ p") %>%
+  html_text()
+split_string <- str_split(string, "\n\n")[[1]]
+split_string <- split_string[2:(length(split_string)-1)]
+
+KIM_rating <- word(split_string, -1) %>%
+  str_split("[.]")
+MPAA_rating <- word(split_string, -3) %>%
+  str_sub(2,-2)
+Year <- word(split_string, -4) %>%
+  str_sub(2,-2)
+Title <- word(split_string, 1, -5)
+
+mat <- cbind(Title, Year, MPAA_rating, do.call(rbind, KIM_rating))
+
+mat_master <- matrix(NA, nrow=4488, ncol=6)
+for (n in 1:34){
+  mat_master[n,] <- mat[n,]
+}
+```
+
+```{r}
+url1 <- "http://www.kids-in-mind.com/cgi-bin/listbyrating/search.pl?query=&stpos="
+url2 <- "&stype=AND&s1=0&s2=10&v1=0&v2=10&p1=0&p2=10&m=1&m=2&m=3&m=4"
+
+add_movies <- function(x){
+  url <- str_c(url1, x, url2, sep="")
+  webpage <- read_html(url)
+  string <- webpage %>%
+    html_nodes(".t11normal+ p") %>%
+    html_text()
+  split_string <- str_split(string, "\n\n")[[1]]
+  split_string <- split_string[2:(length(split_string)-1)]
+  
+  KIM_ratings <- word(split_string, -1) %>%
+    str_split("[.]")
+  MPAA_ratings <- word(split_string, -3) %>%
+    str_sub(2,-2)
+  Year <- word(split_string, -4) %>%
+    str_sub(2,-2)
+  Title <- word(split_string, 1, -5)
+  
+  temp <- cbind(Title, Year, MPAA_rating, do.call(rbind, KIM_rating))
+  for (n in 1:34){
+    mat_master[(n+x),] <<- temp[n,]   # Assign value to global variable
+  }
+}
+```
+
+Now, we loop through all the relevant pages of kids-in-mind.com (4488 movies)
+
+```{r, warning=FALSE}
+vec <- seq(34, 4488, 34)
+for(i in vec){
+  add_movies(i)
+}
+```
+
+Finaly, we output the master data frame
+
+```{r}
+df_master <- data.frame(mat_master)
+names(df_master) <- c("Title", "Year", "MPAA_Rating", "Sex", "Violence", "Profanity")
+write_csv(df_master, path="movie_ratings.csv")
+```
 
