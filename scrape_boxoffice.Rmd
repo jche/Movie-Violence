@@ -1,7 +1,7 @@
 ---
 title: "Web Scraping Box Office Data"
-author: ""
-date: ""
+author: "Jonathan Che"
+date: "10 April 2017"
 output: 
   pdf_document:
     fig_height: 3
@@ -21,6 +21,7 @@ require(rvest)
 require(readr)
 require(stringr)
 require(data.table)
+require(lubridate)
 ```
 
 ```{r, include=FALSE}
@@ -95,21 +96,36 @@ Then, I run the function on years 1998-2004.
 ```{r}
 for (i in years){
   extract_year(i)
-  print(str_c("Finished ", i, sep=""))
+  # print(str_c("Finished ", i, sep=""))
 }
 movie_sales <- rbindlist(master_list)
 ```
 
 At this point, the data are consolidated, though they are still somewhat messy. I do some cleaning before I output everything.
 
-```{r}
+```{r, warning=FALSE}
 names(movie_sales) <- c("Title", "Date", "Rank", "Gross", "Percent_Change", "Theaters", "Gross_Per_Theater", "Cumul_Gross", "Days_Since_Release")
+
+movie_sales <- movie_sales %>%
+  mutate(Date = ymd(Date)) %>%
+  mutate(Year = year(Date)) %>%
+  mutate(Month = month(Date)) %>%
+  mutate(Day = day(Date)) %>%
+  mutate(Weekday = wday(Date)) %>%
+  # mutate(Rank = as.numeric(Rank)) %>%
+  mutate(Gross = as.numeric(str_replace_all(Gross, "[$,]",""))) %>%
+  # mutate(Percent_Change = as.numeric(str_replace_all(Percent_Change, "[^-0-9]", ""))) %>%
+  # mutate(Theaters = as.numeric(str_replace_all(Theaters, "[,]",""))) %>%
+  # mutate(Gross_Per_Theater = as.numeric(str_replace_all(Gross_Per_Theater, "[$,]",""))) %>%
+  # mutate(Cumul_Gross = as.numeric(str_replace_all(Gross, "[^0-9]",""))) %>%
+  mutate(Days_Since_Release = as.numeric(str_replace_all(Days_Since_Release, "[,]", "")))
+movie_sales <- movie_sales[,c("Title","Year","Month","Day","Weekday","Gross","Days_Since_Release")]
 ```
 
 Finally, I export a csv and a rda file.
 
 ```{r}
-write_csv(movie_ratings, path="movie_sales.csv")
-saveRDS(movie_ratings, "movie_sales.rds")
+write_csv(movie_sales, path="movie_sales.csv")
+saveRDS(movie_sales, "movie_sales.rds")
 ```
 
