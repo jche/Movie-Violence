@@ -119,7 +119,7 @@ movie_sales <- movie_sales %>%
   # mutate(Gross_Per_Theater = as.numeric(str_replace_all(Gross_Per_Theater, "[$,]",""))) %>%
   # mutate(Cumul_Gross = as.numeric(str_replace_all(Gross, "[^0-9]",""))) %>%
   mutate(Days_Since_Release = as.numeric(str_replace_all(Days_Since_Release, "[,]", "")))
-movie_sales <- movie_sales[,c("Title","Year","Month","Day","Weekday","Gross","Days_Since_Release")]
+movie_sales <- movie_sales[,c("Title","Date", "Year","Month","Day","Weekday","Gross","Days_Since_Release")]
 ```
 
 Finally, I export a csv and a rda file.
