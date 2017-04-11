@@ -1,0 +1,133 @@
+---
+title: "Computing Expected Violence Exposure"
+author: "Jonathan Che"
+date: "10 April 2017"
+output: 
+  pdf_document:
+    fig_height: 3
+    fig_width: 5
+  html_document:
+    fig_height: 3
+    fig_width: 5
+  word_document:
+    fig_height: 3
+    fig_width: 5
+---
+
+
+```{r, include=FALSE}
+require(mosaic)
+require(dplyr)
+require(readr)
+require(stringr)
+```
+
+```{r, include=FALSE}
+# Some customization.  You can alter or delete as desired (if you know what you are doing).
+
+# This changes the default colors in lattice plots.
+trellis.par.set(theme=theme.mosaic())  
+
+# knitr settings to control how R chunks work.
+require(knitr)
+opts_chunk$set(
+  tidy=FALSE,     # display code as typed
+  size="small"    # slightly smaller font for code
+)
+```
+
+## Overview
+
+In Dahl and DellaVigna's paper "Does Movie Violence Increase Violent Crime?", they find that the "incapacitation effect" outweighs the "arousal effect" (details in paper summary). In their analyses, they use kids-in-mind.com's violence ratings to measure public exposure to movie violence.
+
+To get a better understanding of the differen effects of incapacitation and arousal, I build a model to predict "expected" exposure to violence, as opposed to kids-in-mind.com's "actual" exposure to violence scores. The variation between "expected" and "actual" violence will drive my regression analyses.
+
+In this document, I will first perform a proxy replication of how Dahl and DellaVigna calculate public exposure to movie violence to see how my methods compare to theirs. I do this for a few reasons. First, I cannot directly view the methods that Dahl and DellaVigna use to calculate public exposure to movie violence. Though I have the final computed values, I don't have the specifics of how they were calculated. Thus, before I calculate my "expected exposure" scores, I want to check that my methods are at least similar to theirs. Second, I will not (at least for now) be imputing any box office sales like Dahl and DellaVigna do (Appendix I). Thus, my results will definitely be different from theirs. I want to check that the magnitude of this difference is not too extreme before proceeding. To check for similarity, I will just examine a scatterplot (and the R^2).
+
+Then, I will use a regression methodology to compute "expected exposure" scores. I will base these predictions on the movie's MPAA rating, and its genre.
+
+## Method
+
+First, I pull in all the data that I will need.
+
+```{r}
+movie_ratings <- readRDS("movie_ratings.rds")
+movie_sales <- readRDS("movie_sales.rds")
+ticket_prices <- read_csv("ticket_prices.csv")
+```
+
+"We deflate... the daily box-office sales by the average price of a ticket" (Dahl and DellaVigna 690)
+
+```{r}
+movie_sales <- movie_sales %>%
+  left_join(ticket_prices, by="Year") %>%
+  mutate(tickets = Gross/Price)
+```
+
+"We match the box-office data to violence ratings from kids-in-mind.com... we group movies into three categories: strongly violent, mildly violent, and nonviolent" (690). 0-4 is nonviolent, 5-7 is mildly violent, 8-10 is violent.
+
+```{r}
+# Some data cleaning first
+movie_ratings <- movie_ratings %>%
+  select(Title, Year, MPAA_Rating, Violence) %>%
+  mutate(Year = as.numeric(as.character(Year))) %>%
+  mutate(Violence = as.numeric(as.character(Violence))) %>%
+  mutate(MPAA_Rating = as.character(MPAA_Rating)) %>%
+  mutate(MPAA_Rating = str_replace_all(MPAA_Rating, "[-\\[\\]]", ""))
+
+movie_ratings <- movie_ratings %>%
+  mutate(viol_strong = Violence >= 8) %>%
+  mutate(viol_mild = (Violence >=5 & Violence <= 7)) %>%
+  mutate(viol_non = Violence <= 4)
+```
+
+Now, we merge the two data frames by movie title.
+
+```{r, warning=FALSE}
+# Kids in mind parses "The ___" movies as "___, The" (same as "A ___")
+movie_ratings <- movie_ratings %>%
+  mutate(Title = ifelse(str_detect(Title, ", The"), 
+                        str_c("The ", str_replace(Title, ", The", "")), 
+                        as.character(Title))) %>%
+  mutate(Title = ifelse(str_detect(Title, ", A"), 
+                        str_c("A ", str_replace(Title, ", A", "")), 
+                        as.character(Title)))
+# Manual method of matching some more difficult names
+movie_ratings <- movie_ratings %>%
+  mutate(Title = ifelse(Title == "Dr. Dolittle", "Doctor Dolittle",
+                 ifelse(Title == "Star Wars: Episode II - Attack of the Clones", "Star Wars Ep. II: Attack of the Clones",
+                 ifelse(Title == "Star Wars Episode I: The Phantom Menace", "Star Wars Ep. I: The Phantom Menace",
+                 ifelse(Title == "The Lord of the Rings: Return of the King", "The Lord of the Rings: The Return of the King",
+                 ifelse(Title == "Jurassic Park III", "Jurassic Park 3",
+                 ifelse(Title == "Men In Black II", "Men in Black 2",
+                 ifelse(Title == "X2: X-Men United", "X2", Title))))))))
+# Box office info parsed this title stranglely
+movie_sales <- movie_sales %>%
+  mutate(Title = ifelse(str_detect(Title, "Harry Potter and the Sorcerer"),
+                        "Harry Potter and the Sorcerer's Stone",
+                        as.character(Title)))
+
+# Unusual coding to deal with movies with same title in different years, or same movie spanning different years
+# Assume that two movies with the same title don't come out in consecutive years
+movie_ratings2 <- movie_ratings %>%
+  mutate(Year = Year+1)
+movie <- movie_sales %>%
+  left_join(movie_ratings, by=c("Title", "Year")) %>%
+  left_join(movie_ratings2, by=c("Title", "Year")) %>%
+  mutate(MPAA_Rating = ifelse(is.na(MPAA_Rating.x), MPAA_Rating.y, MPAA_Rating.x)) %>%
+  mutate(Violence = ifelse(is.na(Violence.x), Violence.y, Violence.x)) %>%
+  mutate(viol_strong = ifelse(is.na(viol_strong.x), viol_strong.y, viol_strong.x)) %>%
+  mutate(viol_mild = ifelse(is.na(viol_mild.x), viol_mild.y, viol_mild.x)) %>%
+  mutate(viol_non = ifelse(is.na(viol_non.x), viol_non.y, viol_non.x)) %>%
+  select(-MPAA_Rating.x, -Violence.x, -viol_strong.x, -viol_mild.x, -viol_non.x,
+         -MPAA_Rating.y, -Violence.y, -viol_strong.y, -viol_mild.y, -viol_non.y)
+movie$MPAA_Rating = as.factor(movie$MPAA_Rating)
+```
+
+Finally, we can compute the daily exposure to movie violence.
+
+```{r}
+
+```
+
+
