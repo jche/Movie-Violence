@@ -84,7 +84,7 @@ extract_year <- function(year){
     info_table <- info_table[[1]]
     info_table <- info_table %>%
       filter(str_detect(X1, "MPAA")|str_detect(X1, "Genre"))
-    movie_info_list[[i]] <<- data.table(Name=movie_names[i], Genre=info_table$X2[2], Info=info_table$X2[1])
+    movie_info_list[[i]] <<- data.table(Title=movie_names[i], Genre=info_table$X2[2], Info=info_table$X2[1])
     #movie_info_list[[i]] <<- list(movie_names[i], info_table$X2[2], info_table$X2[1])
     #movie_info_df <<- rbind(movie_info_df, c(movie_names[i], info_table$X2[2], info_table$X2[1]))
   }
