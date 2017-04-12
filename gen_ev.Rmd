@@ -20,6 +20,7 @@ require(dplyr)
 require(readr)
 require(stringr)
 require(ggplot2)
+require(lubridate)
 ```
 
 ```{r, include=FALSE}
@@ -276,7 +277,12 @@ daily_exposure <- movie %>%
 With the full data frame compiled, I export the data for analysis.
 
 ```{r}
-write_csv(daily_exposure, path="master.csv")
-saveRDS(daily_exposure, "master.rds")
+master <- dd %>%
+  mutate(Date = as.Date(mdy, origin="1960-01-01 UTC")) %>%
+  left_join(daily_exposure, by="Date") %>%
+  filter(year(Date) >= 1998)
+
+write_csv(master, path="master.csv")
+saveRDS(master, "master.rds")
 ```
 
