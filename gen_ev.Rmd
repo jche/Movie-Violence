@@ -14,12 +14,12 @@ output:
     fig_width: 5
 ---
 
-
 ```{r, include=FALSE}
 require(mosaic)
 require(dplyr)
 require(readr)
 require(stringr)
+require(ggplot2)
 ```
 
 ```{r, include=FALSE}
@@ -53,6 +53,7 @@ First, I pull in all the data that I will need.
 ```{r}
 movie_ratings <- readRDS("movie_ratings.rds")
 movie_sales <- readRDS("movie_sales.rds")
+movie_genres <- readRDS("movie_genres.rds")
 ticket_prices <- read_csv("ticket_prices.csv")
 ```
 
@@ -61,7 +62,7 @@ ticket_prices <- read_csv("ticket_prices.csv")
 ```{r}
 movie_sales <- movie_sales %>%
   left_join(ticket_prices, by="Year") %>%
-  mutate(tickets = Gross/Price)
+  mutate(Tickets = Gross/Price)
 ```
 
 "We match the box-office data to violence ratings from kids-in-mind.com... we group movies into three categories: strongly violent, mildly violent, and nonviolent" (690). 0-4 is nonviolent, 5-7 is mildly violent, 8-10 is violent.
@@ -101,8 +102,13 @@ movie_ratings <- movie_ratings %>%
                  ifelse(Title == "Jurassic Park III", "Jurassic Park 3",
                  ifelse(Title == "Men In Black II", "Men in Black 2",
                  ifelse(Title == "X2: X-Men United", "X2", Title))))))))
-# Box office info parsed this title stranglely
+# The-numbers.com parsed this title strangely
 movie_sales <- movie_sales %>%
+  mutate(Title = ifelse(str_detect(Title, "Harry Potter and the Sorcerer"),
+                        "Harry Potter and the Sorcerer's Stone",
+                        as.character(Title))) %>%
+  filter(Year <= 2005)   # To avoid rescreening sales
+movie_genres <- movie_genres %>%
   mutate(Title = ifelse(str_detect(Title, "Harry Potter and the Sorcerer"),
                         "Harry Potter and the Sorcerer's Stone",
                         as.character(Title)))
@@ -112,6 +118,7 @@ movie_sales <- movie_sales %>%
 movie_ratings2 <- movie_ratings %>%
   mutate(Year = Year+1)
 movie <- movie_sales %>%
+  left_join(movie_genres, by="Title") %>%
   left_join(movie_ratings, by=c("Title", "Year")) %>%
   left_join(movie_ratings2, by=c("Title", "Year")) %>%
   mutate(MPAA_Rating = ifelse(is.na(MPAA_Rating.x), MPAA_Rating.y, MPAA_Rating.x)) %>%
@@ -122,12 +129,154 @@ movie <- movie_sales %>%
   select(-MPAA_Rating.x, -Violence.x, -viol_strong.x, -viol_mild.x, -viol_non.x,
          -MPAA_Rating.y, -Violence.y, -viol_strong.y, -viol_mild.y, -viol_non.y)
 movie$MPAA_Rating = as.factor(movie$MPAA_Rating)
+movie$Genre = as.factor(movie$Genre)
 ```
 
 Finally, we can compute the daily exposure to movie violence.
 
 ```{r}
-
+daily_exposure <- movie %>%
+  group_by(Date, Weekday) %>%
+  summarise(tickets_tot = sum(Tickets),
+            tickets_strong = sum(ifelse(viol_strong, Tickets, 0)),
+            tickets_mild = sum(ifelse(viol_mild, Tickets, 0)),
+            tickets_non = sum(ifelse(viol_non, Tickets, 0)))
 ```
 
+## Comparing to D&D
+
+First, we construct a scatterplot similar to Dahl and DellaVigna's Figure 1a.
+
+```{r}
+# Aggregate by weekend
+weekend_exposure <- daily_exposure %>%
+  ungroup() %>%
+  filter(Weekday==1|Weekday==6|Weekday==7) %>%
+  mutate(Date = ifelse(Weekday==7, Date-1,
+                ifelse(Weekday==1, Date-2, Date))) %>%
+  mutate(Date = as.Date(Date, origin="1970-01-01 UTC")) %>%
+  group_by(Date) %>%
+  summarise(tickets_tot = sum(tickets_tot),
+            tickets_strong = sum(tickets_strong),
+            tickets_mild = sum(tickets_mild),
+            tickets_non = sum(tickets_non))
+  
+ggplot(weekend_exposure, aes(x=Date, y=tickets_strong)) +
+  geom_line() +
+  labs(title="Weekend Theater Audience of Strongly Violent Movies",
+       y="Weekend Audience",
+       x="Weekend")
+```
+
+We note a few things. First, our exposure numbers are definitely sparser, which is expected, given that we only use top 10 movies. Second, our exposure numbers don't peak as highly (again expected).
+
+Now, we pull in Dahl and DellaVigna's numbers to compare.
+
+```{r}
+dd <- read_csv("fulliblockday.csv")
+dd_ev <- dd %>%
+  select(mdy, rjd04viol, rjd57viol, rjd810viol) %>%
+  # Origin date computed from information in data
+  mutate(Date = as.Date(mdy, origin="1960-01-01 UTC"))
+compare_ev <- weekend_exposure %>%
+  left_join(dd_ev, by="Date")
+  # not sure how exactly D&D compute values
+  # mutate(ln_viol = log(tickets_strong),
+  #        ln_mild = log(tickets_mild),
+  #        ln_non = log(tickets_non))
+
+ggplot(compare_ev, aes(x=rjd810viol, y=tickets_strong)) +
+  geom_point()
+ggplot(compare_ev, aes(x=rjd57viol, y=tickets_mild)) +
+  geom_point()
+ggplot(compare_ev, aes(x=rjd04viol, y=tickets_non)) +
+  geom_point()
+```
+
+Obviously, these aren't perfect relationships. In particular, we can see how my data underestimates exposure on many days.
+
+## Computing Expected Exposure to Violence
+
+Though my data are not great, they do not display any glaring discrepancies with Dahl and DellaVigna's data either. As such, I proceed to calculate expected exposure to violence.
+
+First, I run some summary statistics to explore the variation in my data.
+
+```{r, echo=FALSE}
+mosaic::tally(viol_strong~MPAA_Rating, data=movie)
+mosaic::tally(viol_mild~MPAA_Rating, data=movie)
+mosaic::tally(viol_non~MPAA_Rating, data=movie)
+
+mosaic::tally(viol_strong~Genre, data=movie)
+mosaic::tally(viol_mild~Genre, data=movie)
+mosaic::tally(viol_non~Genre, data=movie)
+```
+
+We see that there are definitely patterns in the data, but the relationships between MPAA Rating/Genre and Violence aren't perfect. Thus, we proceed to use regression to predict violence.
+
+```{r}
+m1 <- lm(Violence ~ Genre+MPAA_Rating, data=movie)
+movie <- movie %>%
+  mutate(Exp_Violence = fitted(m1))
+summary(m1)
+```
+
+We see that Genre and MPAA Rating capture 57 percent of the variation in kids-in-mind violence. We plot the relationship visually.
+
+```{r}
+ggplot(movie, aes(x=Violence, y=Exp_Violence)) +
+  geom_point() +
+  labs(title="Actual vs. Expected Violence in Movies",
+       y="Expected Violence",
+       x="Actual Violence") +
+  geom_abline(slope=1, intercept=0)
+  
+cor(Violence~Exp_Violence, data=movie)
+```
+
+We see that there is a decent amount of variation in the measures, which is good for our analyses. As a final note, we confirm that some examples of movies with large residuals are actually unexpectedly violent/nonviolent.
+
+```{r, warning=FALSE}
+foo <- movie %>%
+  mutate(Resid_Violence = Exp_Violence-Violence) %>%
+  group_by(Title) %>%
+  summarise(Resid_Violence=mean(Resid_Violence)) %>%
+  arrange(Resid_Violence)
+head(foo)
+```
+
+Looking at the top 6 movies that are "more violent than expected", we see that our measure performs decently well. Many of these films are in fact more violent than one would perhaps anticipate. We note that some movies, such as Hannibal and Gladiator, should be expected to be violent, and thus should not really be on this list. More controls may produce a better measure, but for now, I proceed with the current results.
+
+```{r}
+foo <- foo %>%
+  arrange(desc(Resid_Violence))
+head(foo)
+```
+
+The top 6 movies that are "less violent than expected" seem to make sense as well, though somewhat less so than the "more violent" movies. R-rated movies with little to no violence seem to cause the model some issues. Again, more controls may help here, but for now I'll proceed with the current results.
+
+```{r}
+movie <- movie %>%
+  mutate(exp_viol_strong = Exp_Violence>=8,
+         exp_viol_mild = Exp_Violence>4 & Exp_Violence<8,
+         exp_viol_non = Exp_Violence<=4)
+
+daily_exposure <- movie %>%
+  group_by(Date) %>%
+  summarise(tickets_tot = sum(Tickets),
+            tickets_strong = sum(ifelse(viol_strong, Tickets, 0)),
+            tickets_mild = sum(ifelse(viol_mild, Tickets, 0)),
+            tickets_non = sum(ifelse(viol_non, Tickets, 0)),
+            tickets_exp_strong = sum(ifelse(exp_viol_strong, Tickets, 0)),
+            tickets_exp_mild = sum(ifelse(exp_viol_mild, Tickets, 0)),
+            tickets_exp_non = sum(ifelse(exp_viol_non, Tickets, 0)))
+```
+
+## Exporting Data
+
+With the full data frame compiled, I export the data for analysis.
+
+```{r}
+write_csv(daily_exposure, path="master.csv")
+saveRDS(daily_exposure, "master.rds")
+```
 
