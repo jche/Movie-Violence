@@ -257,8 +257,8 @@ The top 6 movies that are "less violent than expected" seem to make sense as wel
 
 ```{r}
 movie <- movie %>%
-  mutate(exp_viol_strong = Exp_Violence>=8,
-         exp_viol_mild = Exp_Violence>4 & Exp_Violence<8,
+  mutate(exp_viol_strong = Exp_Violence>=7,   # Note: 7, not 8 because of expected violence model
+         exp_viol_mild = Exp_Violence>4 & Exp_Violence<7,
          exp_viol_non = Exp_Violence<=4)
 
 daily_exposure <- movie %>%
@@ -280,7 +280,13 @@ With the full data frame compiled, I export the data for analysis.
 master <- dd %>%
   mutate(Date = as.Date(mdy, origin="1960-01-01 UTC")) %>%
   left_join(daily_exposure, by="Date") %>%
-  filter(year(Date) >= 1998)
+  filter(year(Date) >= 1998) %>%
+  mutate(ln_expstrong = log(tickets_exp_strong),
+         ln_expmild = log(tickets_exp_mild),
+         ln_expnon = log(tickets_exp_non)) %>%
+  mutate(ln_expstrong = ifelse(ln_expstrong=="-Inf", 0, as.numeric(ln_expstrong)),
+         ln_expmild = ifelse(ln_expmild=="-Inf", 0, as.numeric(ln_expmild)),
+         ln_expnon = ifelse(ln_expnon=="-Inf", 0, as.numeric(ln_expnon)))   # Use 0 since nonzero values are all very high
 
 write_csv(master, path="master.csv")
 saveRDS(master, "master.rds")
