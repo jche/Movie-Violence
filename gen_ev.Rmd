@@ -60,7 +60,7 @@ ticket_prices <- read_csv("ticket_prices.csv")
 
 "We deflate... the daily box-office sales by the average price of a ticket" (Dahl and DellaVigna 690)
 
-```{r}
+```{r, warning=FALSE}
 movie_sales <- movie_sales %>%
   left_join(ticket_prices, by="Year") %>%
   mutate(Tickets = Gross/Price)
@@ -173,7 +173,7 @@ We note a few things. First, our exposure numbers are definitely sparser, which 
 
 Now, we pull in Dahl and DellaVigna's numbers to compare.
 
-```{r}
+```{r, warning=FALSE}
 dd <- read_csv("fulliblockday.csv")
 dd_ev <- dd %>%
   select(mdy, rjd04viol, rjd57viol, rjd810viol) %>%
@@ -229,7 +229,9 @@ ggplot(movie, aes(x=Violence, y=Exp_Violence)) +
   labs(title="Actual vs. Expected Violence in Movies",
        y="Expected Violence",
        x="Actual Violence") +
-  geom_abline(slope=1, intercept=0)
+  geom_abline(slope=1, intercept=0) +
+  geom_abline(slope=1, intercept=1) + 
+  geom_abline(slope=1, intercept=-1)
   
 cor(Violence~Exp_Violence, data=movie)
 ```
@@ -259,7 +261,10 @@ The top 6 movies that are "less violent than expected" seem to make sense as wel
 movie <- movie %>%
   mutate(exp_viol_strong = Exp_Violence>=7,   # Note: 7, not 8 because of expected violence model
          exp_viol_mild = Exp_Violence>4 & Exp_Violence<7,
-         exp_viol_non = Exp_Violence<=4)
+         exp_viol_non = Exp_Violence<=4) %>%
+  mutate(more_violent = Exp_Violence-Violence <= -1,
+         as_violent = (Exp_Violence-Violence >-1) & (Exp_Violence-Violence <1),
+         less_violent = Exp_Violence-Violence >= 1)
 
 daily_exposure <- movie %>%
   group_by(Date) %>%
@@ -269,7 +274,12 @@ daily_exposure <- movie %>%
             tickets_non = sum(ifelse(viol_non, Tickets, 0)),
             tickets_exp_strong = sum(ifelse(exp_viol_strong, Tickets, 0)),
             tickets_exp_mild = sum(ifelse(exp_viol_mild, Tickets, 0)),
-            tickets_exp_non = sum(ifelse(exp_viol_non, Tickets, 0)))
+            tickets_exp_non = sum(ifelse(exp_viol_non, Tickets, 0)),
+            tickets_more_violent = sum(ifelse(more_violent, Tickets, 0)),
+            tickets_as_violent = sum(ifelse(as_violent, Tickets, 0)),
+            tickets_less_violent = sum(ifelse(less_violent, Tickets, 0)),
+            tickets_to_violence = tickets_non + 2*tickets_mild + 3*tickets_strong,
+            tickets_to_exp_violence = tickets_exp_non + 2*tickets_exp_mild + 3*tickets_exp_strong)
 ```
 
 ## Exporting Data
@@ -281,14 +291,32 @@ master <- dd %>%
   mutate(Date = as.Date(mdy, origin="1960-01-01 UTC")) %>%
   left_join(daily_exposure, by="Date") %>%
   filter(year(Date) >= 1998) %>%
+  mutate(ln_actstrong = log(tickets_strong),
+         ln_actmild = log(tickets_mild),
+         ln_actnon = log(tickets_non)) %>%
+  mutate(ln_actstrong = ifelse(ln_actstrong=="-Inf", 0, as.numeric(ln_actstrong)),
+         ln_actmild = ifelse(ln_actmild=="-Inf", 0, as.numeric(ln_actmild)),
+         ln_actnon = ifelse(ln_actnon=="-Inf", 0, as.numeric(ln_actnon))) %>%   # Use 0 since nonzero values are all very high
   mutate(ln_expstrong = log(tickets_exp_strong),
          ln_expmild = log(tickets_exp_mild),
          ln_expnon = log(tickets_exp_non)) %>%
   mutate(ln_expstrong = ifelse(ln_expstrong=="-Inf", 0, as.numeric(ln_expstrong)),
          ln_expmild = ifelse(ln_expmild=="-Inf", 0, as.numeric(ln_expmild)),
-         ln_expnon = ifelse(ln_expnon=="-Inf", 0, as.numeric(ln_expnon)))   # Use 0 since nonzero values are all very high
+         ln_expnon = ifelse(ln_expnon=="-Inf", 0, as.numeric(ln_expnon))) %>%
+  mutate(ln_more = log(tickets_more_violent),
+         ln_as = log(tickets_as_violent),
+         ln_less = log(tickets_less_violent)) %>%
+  mutate(ln_more = ifelse(ln_more=="-Inf", 0, as.numeric(ln_more)),
+         ln_as = ifelse(ln_as=="-Inf", 0, as.numeric(ln_as)),
+         ln_less = ifelse(ln_less=="-Inf", 0, as.numeric(ln_less))) %>%
+  mutate(ln_ttv = log(tickets_to_violence),
+         ln_ttev = log(tickets_to_exp_violence)) %>%
+  mutate(ln_ttv = ifelse(ln_ttv=="-Inf", 0, as.numeric(ln_ttv)),
+         ln_ttev = ifelse(ln_ttev=="-Inf", 0, as.numeric(ln_ttev)))
 
 write_csv(master, path="master.csv")
 saveRDS(master, "master.rds")
+write_csv(movie, path="movie.csv")
+saveRDS(movie, "movie.rds")
 ```
 
