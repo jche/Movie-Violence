@@ -108,7 +108,7 @@ movie_sales <- movie_sales %>%
   mutate(Title = ifelse(str_detect(Title, "Harry Potter and the Sorcerer"),
                         "Harry Potter and the Sorcerer's Stone",
                         as.character(Title))) %>%
-  filter(Year <= 2005)   # To avoid rescreening sales
+  filter(Year <= 2005)   # To avoid sales from rescreenings/rereleases of movies
 movie_genres <- movie_genres %>%
   mutate(Title = ifelse(str_detect(Title, "Harry Potter and the Sorcerer"),
                         "Harry Potter and the Sorcerer's Stone",
@@ -165,8 +165,9 @@ weekend_exposure <- daily_exposure %>%
 ggplot(weekend_exposure, aes(x=Date, y=tickets_strong)) +
   geom_line() +
   labs(title="Weekend Theater Audience of Strongly Violent Movies",
-       y="Weekend Audience",
-       x="Weekend")
+       y="Weekend Audience (millions)",
+       x="Weekend") +
+  scale_y_continuous(labels=function(x){x/1000000})
 ```
 
 We note a few things. First, our exposure numbers are definitely sparser, which is expected, given that we only use top 10 movies. Second, our exposure numbers don't peak as highly (again expected).
@@ -198,18 +199,22 @@ Obviously, these aren't perfect relationships. In particular, we can see how my 
 
 ## Computing Expected Exposure to Violence
 
-Though my data are not great, they do not display any glaring discrepancies with Dahl and DellaVigna's data either. As such, I proceed to calculate expected exposure to violence.
+Though my data are not great, they do not display any glaring discrepancies with Dahl and DellaVigna's data either. As such, I proceed to calculate expected exposure to violence using a movie's MPAA rating and genre.
 
-First, I run some summary statistics to explore the variation in my data.
+First, I explore the variation in actual violence by MPAA rating and genre.
 
-```{r, echo=FALSE}
-mosaic::tally(viol_strong~MPAA_Rating, data=movie)
-mosaic::tally(viol_mild~MPAA_Rating, data=movie)
-mosaic::tally(viol_non~MPAA_Rating, data=movie)
+```{r, warning=FALSE}
+foo <- movie_genres %>%
+  left_join(movie_ratings, by="Title") %>%
+  filter(Year >= 1995 & Year <= 2005) %>%
+  mutate(Genre = as.factor(Genre))
 
-mosaic::tally(viol_strong~Genre, data=movie)
-mosaic::tally(viol_mild~Genre, data=movie)
-mosaic::tally(viol_non~Genre, data=movie)
+ggplot(foo, aes(x=MPAA_Rating, y=Violence)) +
+  geom_jitter(aes(color=Genre, shape=Genre)) +
+  scale_shape_manual(values=1:nlevels(foo$Genre)) +
+  labs(title="Actual Movie Violence by Genre and Rating",
+       y="Actual Violence",
+       x="MPAA Rating")
 ```
 
 We see that there are definitely patterns in the data, but the relationships between MPAA Rating/Genre and Violence aren't perfect. Thus, we proceed to use regression to predict violence.
@@ -229,7 +234,7 @@ ggplot(movie, aes(x=Violence, y=Exp_Violence)) +
   labs(title="Actual vs. Expected Violence in Movies",
        y="Expected Violence",
        x="Actual Violence") +
-  geom_abline(slope=1, intercept=0) +
+  # geom_abline(slope=1, intercept=0) +
   geom_abline(slope=1, intercept=1) + 
   geom_abline(slope=1, intercept=-1)
   
@@ -279,7 +284,9 @@ daily_exposure <- movie %>%
             tickets_as_violent = sum(ifelse(as_violent, Tickets, 0)),
             tickets_less_violent = sum(ifelse(less_violent, Tickets, 0)),
             tickets_to_violence = tickets_non + 2*tickets_mild + 3*tickets_strong,
-            tickets_to_exp_violence = tickets_exp_non + 2*tickets_exp_mild + 3*tickets_exp_strong)
+            tickets_to_exp_violence = tickets_exp_non + 2*tickets_exp_mild + 3*tickets_exp_strong,
+            tickets_to_aggviol = sum(Tickets*Violence),
+            tickets_to_aggexpviol = sum(Tickets*Exp_Violence))
 ```
 
 ## Exporting Data
@@ -312,7 +319,11 @@ master <- dd %>%
   mutate(ln_ttv = log(tickets_to_violence),
          ln_ttev = log(tickets_to_exp_violence)) %>%
   mutate(ln_ttv = ifelse(ln_ttv=="-Inf", 0, as.numeric(ln_ttv)),
-         ln_ttev = ifelse(ln_ttev=="-Inf", 0, as.numeric(ln_ttev)))
+         ln_ttev = ifelse(ln_ttev=="-Inf", 0, as.numeric(ln_ttev))) %>%
+  mutate(ln_ttav = log(tickets_to_aggviol),
+         ln_ttaev = log(tickets_to_aggexpviol)) %>%
+  mutate(ln_ttav = ifelse(ln_ttav=="-Inf", 0, as.numeric(ln_ttav)),
+         ln_ttaev = ifelse(ln_ttaev=="-Inf", 0, as.numeric(ln_ttaev)))
 
 write_csv(master, path="master.csv")
 saveRDS(master, "master.rds")
