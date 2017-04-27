@@ -114,23 +114,35 @@ movie_genres <- movie_genres %>%
                         "Harry Potter and the Sorcerer's Stone",
                         as.character(Title)))
 
+# Joining movie_ratings and movie_genres
+movie_ratings <- movie_genres %>%
+  left_join(movie_ratings, by="Title") %>%
+  filter(Year >= 1995 & Year <= 2005)
+
 # Unusual coding to deal with movies with same title in different years, or same movie spanning different years
 # Assume that two movies with the same title don't come out in consecutive years
-movie_ratings2 <- movie_ratings %>%
+movie_ratings_temp <- movie_ratings %>%
   mutate(Year = Year+1)
 movie <- movie_sales %>%
-  left_join(movie_genres, by="Title") %>%
   left_join(movie_ratings, by=c("Title", "Year")) %>%
-  left_join(movie_ratings2, by=c("Title", "Year")) %>%
+  left_join(movie_ratings_temp, by=c("Title", "Year")) %>%
+  mutate(Genre = ifelse(is.na(Genre.x), Genre.y, Genre.x)) %>%
+  mutate(Info = ifelse(is.na(Info.x), Info.y, Info.x)) %>%
   mutate(MPAA_Rating = ifelse(is.na(MPAA_Rating.x), MPAA_Rating.y, MPAA_Rating.x)) %>%
   mutate(Violence = ifelse(is.na(Violence.x), Violence.y, Violence.x)) %>%
   mutate(viol_strong = ifelse(is.na(viol_strong.x), viol_strong.y, viol_strong.x)) %>%
   mutate(viol_mild = ifelse(is.na(viol_mild.x), viol_mild.y, viol_mild.x)) %>%
   mutate(viol_non = ifelse(is.na(viol_non.x), viol_non.y, viol_non.x)) %>%
-  select(-MPAA_Rating.x, -Violence.x, -viol_strong.x, -viol_mild.x, -viol_non.x,
-         -MPAA_Rating.y, -Violence.y, -viol_strong.y, -viol_mild.y, -viol_non.y)
+  select(-Genre.x, -Info.x, -MPAA_Rating.x, -Violence.x, -viol_strong.x, -viol_mild.x, -viol_non.x,
+         -Genre.y, -Info.y, -MPAA_Rating.y, -Violence.y, -viol_strong.y, -viol_mild.y, -viol_non.y)
 movie$MPAA_Rating = as.factor(movie$MPAA_Rating)
 movie$Genre = as.factor(movie$Genre)
+
+# Cleanup
+movie_ratings$Genre = as.factor(movie_ratings$Genre)
+rm(movie_genres)
+rm(movie_ratings_temp)
+rm(ticket_prices)
 ```
 
 Finally, we can compute the daily exposure to movie violence.
@@ -199,19 +211,14 @@ Obviously, these aren't perfect relationships. In particular, we can see how my 
 
 ## Computing Expected Exposure to Violence
 
-Though my data are not great, they do not display any glaring discrepancies with Dahl and DellaVigna's data either. As such, I proceed to calculate expected exposure to violence using a movie's MPAA rating and genre.
+Though my data are not perfect, they do not display any glaring discrepancies with Dahl and DellaVigna's data either. As such, I proceed to calculate expected exposure to violence using a movie's MPAA rating and genre.
 
 First, I explore the variation in actual violence by MPAA rating and genre.
 
 ```{r, warning=FALSE}
-foo <- movie_genres %>%
-  left_join(movie_ratings, by="Title") %>%
-  filter(Year >= 1995 & Year <= 2005) %>%
-  mutate(Genre = as.factor(Genre))
-
-ggplot(foo, aes(x=MPAA_Rating, y=Violence)) +
+ggplot(movie_ratings, aes(x=MPAA_Rating, y=Violence)) +
   geom_jitter(aes(color=Genre, shape=Genre)) +
-  scale_shape_manual(values=1:nlevels(foo$Genre)) +
+  scale_shape_manual(values=1:nlevels(movie_ratings$Genre)) +
   labs(title="Actual Movie Violence by Genre and Rating",
        y="Actual Violence",
        x="MPAA Rating")
@@ -220,16 +227,16 @@ ggplot(foo, aes(x=MPAA_Rating, y=Violence)) +
 We see that there are definitely patterns in the data, but the relationships between MPAA Rating/Genre and Violence aren't perfect. Thus, we proceed to use regression to predict violence.
 
 ```{r}
-m1 <- lm(Violence ~ Genre+MPAA_Rating, data=movie)
-movie <- movie %>%
+m1 <- lm(Violence ~ Genre+MPAA_Rating, data=movie_ratings)
+movie_ratings <- movie_ratings %>%
   mutate(Exp_Violence = fitted(m1))
 summary(m1)
 ```
 
-We see that Genre and MPAA Rating capture 57 percent of the variation in kids-in-mind violence. We plot the relationship visually.
+We see that Genre and MPAA Rating capture 50 percent of the variation in kids-in-mind violence. We plot the relationship visually.
 
 ```{r}
-ggplot(movie, aes(x=Violence, y=Exp_Violence)) +
+ggplot(movie_ratings, aes(x=Violence, y=Exp_Violence)) +
   geom_point() +
   labs(title="Actual vs. Expected Violence in Movies",
        y="Expected Violence",
@@ -238,16 +245,14 @@ ggplot(movie, aes(x=Violence, y=Exp_Violence)) +
   geom_abline(slope=1, intercept=1) + 
   geom_abline(slope=1, intercept=-1)
   
-cor(Violence~Exp_Violence, data=movie)
+cor(Violence~Exp_Violence, data=movie_ratings)
 ```
 
 We see that there is a decent amount of variation in the measures, which is good for our analyses. As a final note, we confirm that some examples of movies with large residuals are actually unexpectedly violent/nonviolent.
 
 ```{r, warning=FALSE}
-foo <- movie %>%
+foo <- movie_ratings %>%
   mutate(Resid_Violence = Exp_Violence-Violence) %>%
-  group_by(Title) %>%
-  summarise(Resid_Violence=mean(Resid_Violence)) %>%
   arrange(Resid_Violence)
 head(foo)
 ```
@@ -263,6 +268,9 @@ head(foo)
 The top 6 movies that are "less violent than expected" seem to make sense as well, though somewhat less so than the "more violent" movies. R-rated movies with little to no violence seem to cause the model some issues. Again, more controls may help here, but for now I'll proceed with the current results.
 
 ```{r}
+movie <- movie %>%
+  left_join(select(movie_ratings, Title, Exp_Violence), by="Title")
+
 movie <- movie %>%
   mutate(exp_viol_strong = Exp_Violence>=7,   # Note: 7, not 8 because of expected violence model
          exp_viol_mild = Exp_Violence>4 & Exp_Violence<7,
@@ -329,5 +337,7 @@ write_csv(master, path="master.csv")
 saveRDS(master, "master.rds")
 write_csv(movie, path="movie.csv")
 saveRDS(movie, "movie.rds")
+write_csv(movie_ratings, path="movie_ratings.csv")
+saveRDS(movie_ratings, "movie_ratings.rds")
 ```
 
