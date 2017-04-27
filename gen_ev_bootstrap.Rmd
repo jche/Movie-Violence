@@ -1,0 +1,181 @@
+---
+title: "Computing Expected Violence Exposure with the Bootstrap"
+author: "Jonathan Che"
+date: "10 April 2017"
+output: 
+  pdf_document:
+    fig_height: 3
+    fig_width: 5
+  html_document:
+    fig_height: 3
+    fig_width: 5
+  word_document:
+    fig_height: 3
+    fig_width: 5
+---
+
+```{r, include=FALSE}
+require(mosaic)
+require(dplyr)
+require(readr)
+require(stringr)
+require(ggplot2)
+require(lubridate)
+```
+
+```{r, include=FALSE}
+# Some customization.  You can alter or delete as desired (if you know what you are doing).
+
+# This changes the default colors in lattice plots.
+trellis.par.set(theme=theme.mosaic())  
+
+# knitr settings to control how R chunks work.
+require(knitr)
+opts_chunk$set(
+  tidy=FALSE,     # display code as typed
+  size="small"    # slightly smaller font for code
+)
+```
+
+## Overview
+
+Instead of using simple regression to produce a measure of "expected violence", I implement a bootstrap procedure.
+
+## Method
+
+First, I pull in all the data that I will need.
+
+```{r}
+movie_ratings <- readRDS("movie_ratings_final.rds")
+movie <- readRDS("movie.rds")
+dd <- read_csv("fulliblockday.csv")
+```
+
+Then, I randomly partition the movies into 5 groups.
+
+```{r}
+set.seed(392)
+df <- movie_ratings[sample(nrow(movie_ratings)),]   # Shuffle rows
+
+m1 <- lm(Violence ~ Genre+MPAA_Rating, data=df[15:70,])
+p1 <- predict(m1, df[1:14,])
+m2 <- lm(Violence ~ Genre+MPAA_Rating, data=df[c(1:14, 29:70),])
+p2 <- predict(m2, df[15:28,])
+m3 <- lm(Violence ~ Genre+MPAA_Rating, data=df[c(1:28, 43:70),])
+p3 <- predict(m3, df[c(29:37, 39:42),])  # 38 is the musical
+m4 <- lm(Violence ~ Genre+MPAA_Rating, data=df[c(1:42, 57:70),])
+p4 <- predict(m4, df[43:56,])
+m5 <- lm(Violence ~ Genre+MPAA_Rating, data=df[1:56,])
+p5 <- predict(m5, df[57:70,])
+
+Exp_Viol_Boot <- c(p1,p2,p3,p4,p5)
+Exp_Viol_Boot <- append(Exp_Viol_Boot, 4, after=37)
+
+df <- df %>%
+  bind_cols(data.frame(Exp_Viol_Boot))
+```
+
+
+
+```{r}
+ggplot(df, aes(x=Violence, y=Exp_Viol_Boot)) +
+  geom_point() +
+  labs(title="Actual vs. Expected Violence in Movies",
+       y="Expected Violence",
+       x="Actual Violence") +
+  # geom_abline(slope=1, intercept=0) +
+  geom_abline(slope=1, intercept=1) + 
+  geom_abline(slope=1, intercept=-1)
+  
+cor(Exp_Violence~Exp_Viol_Boot, data=df)
+```
+
+We see that there is a decent amount of variation in the measures, which is good for our analyses. As a final note, we confirm that some examples of movies with large residuals are actually unexpectedly violent/nonviolent.
+
+```{r, warning=FALSE}
+foo <- df %>%
+  mutate(Resid_Violence = Exp_Viol_Boot-Violence) %>%
+  arrange(Resid_Violence)
+head(foo)
+```
+
+Looking at the top 6 movies that are "more violent than expected", we see that our measure performs decently well. Many of these films are in fact more violent than one would perhaps anticipate. We note that some movies, such as Hannibal and Gladiator, should be expected to be violent, and thus should not really be on this list. More controls may produce a better measure, but for now, I proceed with the current results.
+
+```{r}
+foo <- foo %>%
+  arrange(desc(Resid_Violence))
+head(foo)
+```
+
+The top 6 movies that are "less violent than expected" seem to make sense as well, though somewhat less so than the "more violent" movies. R-rated movies with little to no violence seem to cause the model some issues. Again, more controls may help here, but for now I'll proceed with the current results.
+
+```{r}
+movie <- movie %>%
+  left_join(select(df, Title, Exp_Viol_Boot), by="Title")
+
+movie <- movie %>%
+  mutate(exp_viol_strong = Exp_Viol_Boot>=7,   # Note: 7, not 8 because of expected violence model
+         exp_viol_mild = Exp_Viol_Boot>4 & Exp_Viol_Boot<7,
+         exp_viol_non = Exp_Viol_Boot<=4) %>%
+  mutate(more_violent = Exp_Viol_Boot-Violence <= -1,
+         as_violent = (Exp_Viol_Boot-Violence >-1) & (Exp_Viol_Boot-Violence <1),
+         less_violent = Exp_Viol_Boot-Violence >= 1)
+
+daily_exposure <- movie %>%
+  group_by(Date) %>%
+  summarise(tickets_tot = sum(Tickets),
+            tickets_strong = sum(ifelse(viol_strong, Tickets, 0)),
+            tickets_mild = sum(ifelse(viol_mild, Tickets, 0)),
+            tickets_non = sum(ifelse(viol_non, Tickets, 0)),
+            tickets_exp_strong = sum(ifelse(exp_viol_strong, Tickets, 0)),
+            tickets_exp_mild = sum(ifelse(exp_viol_mild, Tickets, 0)),
+            tickets_exp_non = sum(ifelse(exp_viol_non, Tickets, 0)),
+            tickets_more_violent = sum(ifelse(more_violent, Tickets, 0)),
+            tickets_as_violent = sum(ifelse(as_violent, Tickets, 0)),
+            tickets_less_violent = sum(ifelse(less_violent, Tickets, 0)),
+            tickets_to_violence = tickets_non + 2*tickets_mild + 3*tickets_strong,
+            tickets_to_exp_violence = tickets_exp_non + 2*tickets_exp_mild + 3*tickets_exp_strong,
+            tickets_to_aggviol = sum(Tickets*Violence),
+            tickets_to_aggexpviol = sum(Tickets*Exp_Viol_Boot))
+```
+
+## Exporting Data
+
+With the full data frame compiled, I export the data for analysis.
+
+```{r}
+master_boot <- dd %>%
+  mutate(Date = as.Date(mdy, origin="1960-01-01 UTC")) %>%
+  left_join(daily_exposure, by="Date") %>%
+  filter(year(Date) >= 1998) %>%
+  mutate(ln_actstrong = log(tickets_strong),
+         ln_actmild = log(tickets_mild),
+         ln_actnon = log(tickets_non)) %>%
+  mutate(ln_actstrong = ifelse(ln_actstrong=="-Inf", 0, as.numeric(ln_actstrong)),
+         ln_actmild = ifelse(ln_actmild=="-Inf", 0, as.numeric(ln_actmild)),
+         ln_actnon = ifelse(ln_actnon=="-Inf", 0, as.numeric(ln_actnon))) %>%   # Use 0 since nonzero values are all very high
+  mutate(ln_expstrong = log(tickets_exp_strong),
+         ln_expmild = log(tickets_exp_mild),
+         ln_expnon = log(tickets_exp_non)) %>%
+  mutate(ln_expstrong = ifelse(ln_expstrong=="-Inf", 0, as.numeric(ln_expstrong)),
+         ln_expmild = ifelse(ln_expmild=="-Inf", 0, as.numeric(ln_expmild)),
+         ln_expnon = ifelse(ln_expnon=="-Inf", 0, as.numeric(ln_expnon))) %>%
+  mutate(ln_more = log(tickets_more_violent),
+         ln_as = log(tickets_as_violent),
+         ln_less = log(tickets_less_violent)) %>%
+  mutate(ln_more = ifelse(ln_more=="-Inf", 0, as.numeric(ln_more)),
+         ln_as = ifelse(ln_as=="-Inf", 0, as.numeric(ln_as)),
+         ln_less = ifelse(ln_less=="-Inf", 0, as.numeric(ln_less))) %>%
+  mutate(ln_ttv = log(tickets_to_violence),
+         ln_ttev = log(tickets_to_exp_violence)) %>%
+  mutate(ln_ttv = ifelse(ln_ttv=="-Inf", 0, as.numeric(ln_ttv)),
+         ln_ttev = ifelse(ln_ttev=="-Inf", 0, as.numeric(ln_ttev))) %>%
+  mutate(ln_ttav = log(tickets_to_aggviol),
+         ln_ttaev = log(tickets_to_aggexpviol)) %>%
+  mutate(ln_ttav = ifelse(ln_ttav=="-Inf", 0, as.numeric(ln_ttav)),
+         ln_ttaev = ifelse(ln_ttaev=="-Inf", 0, as.numeric(ln_ttaev)))
+
+write_csv(master_boot, path="master_boot.csv")
+saveRDS(master_boot, "master_boot.rds")
+```
+
