@@ -45,7 +45,7 @@ The kids-in-mind website has an alphabetical listing of all of their rated movie
 First, I make an empty matrix that's large enough to hold all 4503 movies on kids-in-mind.com.
 
 ```{r, error=FALSE}
-mat_master <- matrix(NA, nrow=4503, ncol=6)   # 4503 films on kids-in-mind.com
+mat_master <- matrix(NA, nrow=4507, ncol=6)   # 4503 films on kids-in-mind.com
 ```
 
 Then, I construct a function that can iteratively scrape the information from each page.
