@@ -281,20 +281,20 @@ movie <- movie %>%
 
 daily_exposure <- movie %>%
   group_by(Date) %>%
-  summarise(tickets_tot = sum(Tickets),
-            tickets_strong = sum(ifelse(viol_strong, Tickets, 0)),
-            tickets_mild = sum(ifelse(viol_mild, Tickets, 0)),
-            tickets_non = sum(ifelse(viol_non, Tickets, 0)),
-            tickets_exp_strong = sum(ifelse(exp_viol_strong, Tickets, 0)),
-            tickets_exp_mild = sum(ifelse(exp_viol_mild, Tickets, 0)),
-            tickets_exp_non = sum(ifelse(exp_viol_non, Tickets, 0)),
-            tickets_more_violent = sum(ifelse(more_violent, Tickets, 0)),
-            tickets_as_violent = sum(ifelse(as_violent, Tickets, 0)),
-            tickets_less_violent = sum(ifelse(less_violent, Tickets, 0)),
+  summarise(tickets_tot = sum(Tickets)/1000000,
+            tickets_strong = sum(ifelse(viol_strong, Tickets, 0))/1000000,
+            tickets_mild = sum(ifelse(viol_mild, Tickets, 0))/1000000,
+            tickets_non = sum(ifelse(viol_non, Tickets, 0))/1000000,
+            tickets_exp_strong = sum(ifelse(exp_viol_strong, Tickets, 0))/1000000,
+            tickets_exp_mild = sum(ifelse(exp_viol_mild, Tickets, 0))/1000000,
+            tickets_exp_non = sum(ifelse(exp_viol_non, Tickets, 0))/1000000,
+            tickets_more_violent = sum(ifelse(more_violent, Tickets, 0))/1000000,
+            tickets_as_violent = sum(ifelse(as_violent, Tickets, 0))/1000000,
+            tickets_less_violent = sum(ifelse(less_violent, Tickets, 0))/1000000,
             tickets_to_violence = tickets_non + 2*tickets_mild + 3*tickets_strong,
             tickets_to_exp_violence = tickets_exp_non + 2*tickets_exp_mild + 3*tickets_exp_strong,
-            tickets_to_aggviol = sum(Tickets*Violence),
-            tickets_to_aggexpviol = sum(Tickets*Exp_Violence))
+            tickets_to_aggviol = sum(Tickets*Violence)/1000000,
+            tickets_to_aggexpviol = sum(Tickets*Exp_Violence)/1000000)
 ```
 
 ## Exporting Data
@@ -305,39 +305,14 @@ With the full data frame compiled, I export the data for analysis.
 master <- dd %>%
   mutate(Date = as.Date(mdy, origin="1960-01-01 UTC")) %>%
   left_join(daily_exposure, by="Date") %>%
-  filter(year(Date) >= 1998) %>%
-  mutate(ln_actstrong = log(tickets_strong),
-         ln_actmild = log(tickets_mild),
-         ln_actnon = log(tickets_non)) %>%
-  mutate(ln_actstrong = ifelse(ln_actstrong=="-Inf", 0, as.numeric(ln_actstrong)),
-         ln_actmild = ifelse(ln_actmild=="-Inf", 0, as.numeric(ln_actmild)),
-         ln_actnon = ifelse(ln_actnon=="-Inf", 0, as.numeric(ln_actnon))) %>%   # Use 0 since nonzero values are all very high
-  mutate(ln_expstrong = log(tickets_exp_strong),
-         ln_expmild = log(tickets_exp_mild),
-         ln_expnon = log(tickets_exp_non)) %>%
-  mutate(ln_expstrong = ifelse(ln_expstrong=="-Inf", 0, as.numeric(ln_expstrong)),
-         ln_expmild = ifelse(ln_expmild=="-Inf", 0, as.numeric(ln_expmild)),
-         ln_expnon = ifelse(ln_expnon=="-Inf", 0, as.numeric(ln_expnon))) %>%
-  mutate(ln_more = log(tickets_more_violent),
-         ln_as = log(tickets_as_violent),
-         ln_less = log(tickets_less_violent)) %>%
-  mutate(ln_more = ifelse(ln_more=="-Inf", 0, as.numeric(ln_more)),
-         ln_as = ifelse(ln_as=="-Inf", 0, as.numeric(ln_as)),
-         ln_less = ifelse(ln_less=="-Inf", 0, as.numeric(ln_less))) %>%
-  mutate(ln_ttv = log(tickets_to_violence),
-         ln_ttev = log(tickets_to_exp_violence)) %>%
-  mutate(ln_ttv = ifelse(ln_ttv=="-Inf", 0, as.numeric(ln_ttv)),
-         ln_ttev = ifelse(ln_ttev=="-Inf", 0, as.numeric(ln_ttev))) %>%
-  mutate(ln_ttav = log(tickets_to_aggviol),
-         ln_ttaev = log(tickets_to_aggexpviol)) %>%
-  mutate(ln_ttav = ifelse(ln_ttav=="-Inf", 0, as.numeric(ln_ttav)),
-         ln_ttaev = ifelse(ln_ttaev=="-Inf", 0, as.numeric(ln_ttaev)))
+  filter(year(Date) >= 1998)
+master[is.na(master)] <- 0   # for days with 0 movies in my data
 
 write_csv(master, path="master.csv")
 saveRDS(master, "master.rds")
 write_csv(movie, path="movie.csv")
 saveRDS(movie, "movie.rds")
-write_csv(movie_ratings, path="movie_ratings.csv")
-saveRDS(movie_ratings, "movie_ratings.rds")
+write_csv(movie_ratings, path="movie_ratings_final.csv")
+saveRDS(movie_ratings, "movie_ratings_final.rds")
 ```
 
