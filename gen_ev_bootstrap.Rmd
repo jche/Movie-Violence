@@ -70,6 +70,7 @@ p5 <- predict(m5, df[57:70,])
 
 Exp_Viol_Boot <- c(p1,p2,p3,p4,p5)
 Exp_Viol_Boot <- append(Exp_Viol_Boot, 4, after=37)
+Exp_Viol_Boot <- ifelse(Exp_Viol_Boot<0, 0, Exp_Viol_Boot)
 
 df <- df %>%
   bind_cols(data.frame(Exp_Viol_Boot))

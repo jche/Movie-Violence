@@ -1,0 +1,71 @@
+Title,Genre,Info,Year,MPAA_Rating,Violence,viol_strong,viol_mild,viol_non,Exp_Violence
+Titanic,Thriller/Suspense,"PG-13 for disaster related peril and violence, nudity, sensuality and brief language",1997,PG13,6,FALSE,TRUE,FALSE,5.8
+Armageddon,Adventure,"PG-13 for sci-fi disaster action, sensuality and brief language",1998,PG13,5,FALSE,TRUE,FALSE,5.85182658370629
+Saving Private Ryan,Drama,"R for intense prolonged realistically graphic sequences of war violence, and for language",1998,R,9,TRUE,FALSE,FALSE,7.24582469162755
+There's Something About Mary,Romantic Comedy,R for strong comic sexual content and language,1998,R,3,FALSE,FALSE,TRUE,4.40241240039297
+The Waterboy,Comedy,PG-13 for language and some crude sexual humor,1998,PG13,4,FALSE,FALSE,TRUE,3.93248553651348
+Doctor Dolittle,Comedy,PG-13 for crude humor and language,1998,PG13,3,FALSE,FALSE,TRUE,3.93248553651348
+Deep Impact,Adventure,PG-13 for intense disaster related elements and brief language,1998,PG13,5,FALSE,TRUE,FALSE,5.8518265837063
+Rush Hour,Action,"PG-13 for sequences of action/violence and shootings, and for language",1998,PG13,6,FALSE,TRUE,FALSE,6.00556707782993
+A Bug's Life,Adventure,G,1998,G,3,FALSE,FALSE,TRUE,3.4
+Godzilla,Action,PG-13 for sci-fi monster action/violence,1998,PG13,5,FALSE,TRUE,FALSE,6.00556707782993
+Star Wars Ep. I: The Phantom Menace,Adventure,PG for sci-fi action/violence,1999,PG,5,FALSE,TRUE,FALSE,4.23150674962704
+The Sixth Sense,Thriller/Suspense,PG-13 for intense thematic material and violent images,1999,PG13,6,FALSE,TRUE,FALSE,5.8
+Toy Story 2,Adventure,G,1999,G,3,FALSE,FALSE,TRUE,3.4
+Austin Powers: The Spy Who Shagged Me,Comedy,PG-13 for sexual innuendo and crude humor,1999,PG13,5,FALSE,TRUE,FALSE,3.93248553651348
+The Matrix,Action,R for sci-fi violence and brief language,1999,R,7,FALSE,TRUE,FALSE,7.98886584434014
+Tarzan,Adventure,G,1999,G,4,FALSE,FALSE,TRUE,3.4
+Big Daddy,Comedy,PG-13 for language and some crude humor,1999,PG13,3,FALSE,FALSE,TRUE,3.93248553651348
+The Mummy,Adventure,PG-13 for pervasive adventure violence and some partial nudity,1999,PG13,6,FALSE,TRUE,FALSE,5.85182658370629
+Runaway Bride,Romantic Comedy,PG for language and some suggestive dialogue,1999,PG,1,FALSE,FALSE,TRUE,0.798793799803514
+The Blair Witch Project,Horror,R,1999,R,3,FALSE,FALSE,TRUE,6.5
+How the Grinch Stole Christmas,Comedy,PG for some crude humor,2000,PG,3,FALSE,FALSE,TRUE,2.31216570243423
+Mission: Impossible 2,Action,PG-13 for intense sequences of violent action and some sensuality,2000,PG13,6,FALSE,TRUE,FALSE,6.00556707782993
+Gladiator,Action,"R for intense, graphic combat",2000,R,10,TRUE,FALSE,FALSE,7.98886584434014
+The Perfect Storm,Drama,PG-13 for language and scenes of peril,2000,PG13,7,FALSE,TRUE,FALSE,5.26252592511735
+Meet the Parents,Comedy,"PG-13 for sexual content, drug references and language",2000,PG13,2,FALSE,FALSE,TRUE,3.93248553651348
+X-Men,Action,PG-13 for sci-fi action violence,2000,PG13,6,FALSE,TRUE,FALSE,6.00556707782993
+Scary Movie,Comedy,"R for strong crude sexual humor, language, drug use and violence",2000,R,8,TRUE,FALSE,FALSE,5.91578430302369
+What Lies Beneath,Thriller/Suspense,"PG-13 for terror/violence, sensuality and brief language",2000,PG13,6,FALSE,TRUE,FALSE,5.8
+Dinosaur,Adventure,PG for intense images,2000,PG,4,FALSE,FALSE,TRUE,4.23150674962704
+Erin Brockovich,Drama,R for language,2000,R,1,FALSE,FALSE,TRUE,7.24582469162756
+Harry Potter and the Sorcerer's Stone,Adventure,PG for some scary moments and mild language,2001,PG,4,FALSE,FALSE,TRUE,4.23150674962704
+Shrek,Adventure,PG for mild language and some crude humor,2001,PG,4,FALSE,FALSE,TRUE,4.23150674962704
+"Monsters, Inc.",Adventure,G,2001,G,4,FALSE,FALSE,TRUE,3.4
+Rush Hour 2,Action,"PG-13 for action violence, language and some sexual material",2001,PG13,6,FALSE,TRUE,FALSE,6.00556707782993
+The Lord of the Rings: The Fellowship of the Ring,Adventure,PG-13 for epic battle sequences and some scary images,2001,PG13,7,FALSE,TRUE,FALSE,5.85182658370629
+The Mummy Returns,Adventure,PG-13 for adventure action and violence,2001,PG13,7,FALSE,TRUE,FALSE,5.85182658370629
+Pearl Harbor,Action,"PG-13 for sustained intense war sequences, images of wounded, brief sensuality and some language",2001,PG13,6,FALSE,TRUE,FALSE,6.00556707782993
+Jurassic Park 3,Action,PG-13 for intense sci-fi terror and violence,2001,PG13,8,TRUE,FALSE,FALSE,6.00556707782993
+Planet of the Apes,Adventure,PG-13 for some sequences of action/violence,2001,PG13,6,FALSE,TRUE,FALSE,5.85182658370629
+Hannibal,Horror,"R for strong gruesome violence, some nudity and language",2001,R,10,TRUE,FALSE,FALSE,6.5
+Spider-Man,Adventure,PG-13 for stylized violence and action,2002,PG13,6,FALSE,TRUE,FALSE,5.85182658370629
+Star Wars Ep. II: Attack of the Clones,Adventure,PG for sustained of sci-fi action/violence,2002,PG,5,FALSE,TRUE,FALSE,4.23150674962704
+The Lord of the Rings: The Two Towers,Adventure,PG-13 for epic battle sequences and scary images,2002,PG13,7,FALSE,TRUE,FALSE,5.85182658370629
+Harry Potter and the Chamber of Secrets,Adventure,"PG for scary moments, some creature violence and mild language",2002,PG,4,FALSE,FALSE,TRUE,4.23150674962704
+My Big Fat Greek Wedding,Romantic Comedy,PG,2002,PG,2,FALSE,FALSE,TRUE,0.798793799803515
+Signs,Thriller/Suspense,PG-13 for some frightening moments,2002,PG13,5,FALSE,TRUE,FALSE,5.8
+Austin Powers in Goldmember,Comedy,"PG-13 for sexual innuendo, crude humor and language",2002,PG13,4,FALSE,FALSE,TRUE,3.93248553651348
+Men in Black 2,Action,PG-13 for sci-fi action violence and some provocative humor,2002,PG13,5,FALSE,TRUE,FALSE,6.00556707782993
+Ice Age,Adventure,PG for mild peril,2002,PG,3,FALSE,FALSE,TRUE,4.23150674962704
+Die Another Day,Action,PG-13 for action violence and sexuality,2002,PG13,6,FALSE,TRUE,FALSE,6.00556707782993
+Finding Nemo,Adventure,"GG(Rating bulletin 2223, 5/16/2012)",2003,G,3,FALSE,FALSE,TRUE,3.4
+Pirates of the Caribbean: The Curse of the Black Pearl,Adventure,PG-13 for action/adventure violence,2003,PG13,5,FALSE,TRUE,FALSE,5.85182658370629
+The Lord of the Rings: The Return of the King,Adventure,PG-13 for intense epic battle sequences and frightening images,2003,PG13,7,FALSE,TRUE,FALSE,5.85182658370629
+The Matrix Reloaded,Action,R for sci-fi violence and some sexuality,2002,R,7,FALSE,TRUE,FALSE,7.98886584434014
+Bruce Almighty,Comedy,"PG-13 for language, sexual content and some crude humor",2003,PG13,3,FALSE,FALSE,TRUE,3.93248553651348
+X2,Action,"PG-13 for sci-fi action/violence, some sexuality and brief language",2003,PG13,5,FALSE,TRUE,FALSE,6.00556707782993
+Elf,Comedy,PG for some mild rude humor and language,2003,PG,3,FALSE,FALSE,TRUE,2.31216570243423
+Chicago,Musical,"PG-13 for sexual content and dialogue, violence and thematic elements",2002,PG13,4,FALSE,FALSE,TRUE,4
+Terminator 3: Rise of the Machines,Action,"R for strong sci-fi violence and action, and for language and brief nudity",2003,R,8,TRUE,FALSE,FALSE,7.98886584434014
+Bad Boys II,Action,"R for strong violence and action, pervasive language, sexuality and drug content",2003,R,9,TRUE,FALSE,FALSE,7.98886584434014
+Shrek 2,Adventure,"PG for some crude humor, a brief substance reference and some suggestive content",2004,PG,3,FALSE,FALSE,TRUE,4.23150674962704
+Spider-Man 2,Adventure,PG-13 for stylized action violence,2004,PG13,6,FALSE,TRUE,FALSE,5.85182658370629
+The Passion of the Christ,Drama,R for sequences of graphic violence,2004,R,10,TRUE,FALSE,FALSE,7.24582469162755
+The Incredibles,Adventure,PG for action violence,2004,PG,4,FALSE,FALSE,TRUE,4.23150674962704
+Harry Potter and the Prisoner of Azkaban,Adventure,"PG for frightening moments, creature violence and mild language",2004,PG,5,FALSE,TRUE,FALSE,4.23150674962704
+The Day After Tomorrow,Adventure,PG-13 for intense situations of peril,2004,PG13,6,FALSE,TRUE,FALSE,5.85182658370629
+The Bourne Supremacy,Thriller/Suspense,"PG-13 for violence and intense action, and for brief language",2004,PG13,6,FALSE,TRUE,FALSE,5.8
+Meet the Fockers,Comedy,"PG-13 for crude and sexual humor, language and a brief drug reference.",2004,PG13,4,FALSE,FALSE,TRUE,3.93248553651348
+Shark Tale,Adventure,PG for mild language and crude humor,2004,PG,3,FALSE,FALSE,TRUE,4.23150674962704
+National Treasure,Adventure,PG for action violence and some scary images,2004,PG,4,FALSE,FALSE,TRUE,4.23150674962704
