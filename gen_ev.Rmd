@@ -173,13 +173,19 @@ weekend_exposure <- daily_exposure %>%
             tickets_strong = sum(tickets_strong),
             tickets_mild = sum(tickets_mild),
             tickets_non = sum(tickets_non))
-  
+
 ggplot(weekend_exposure, aes(x=Date, y=tickets_strong)) +
-  geom_line() +
+  geom_line(colour="red", lwd=1) +
   labs(title="Weekend Theater Audience of Strongly Violent Movies",
        y="Weekend Audience (millions)",
        x="Weekend") +
-  scale_y_continuous(labels=function(x){x/1000000})
+  scale_y_continuous(labels=function(x){x/1000000})  +
+  theme_bw() +
+  theme(axis.line = element_line(colour = "black"),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.border = element_blank(),
+    panel.background = element_blank()) 
 ```
 
 We note a few things. First, our exposure numbers are definitely sparser, which is expected, given that we only use top 10 movies. Second, our exposure numbers don't peak as highly (again expected).
@@ -294,8 +300,37 @@ daily_exposure <- movie %>%
             tickets_to_violence = tickets_non + 2*tickets_mild + 3*tickets_strong,
             tickets_to_exp_violence = tickets_exp_non + 2*tickets_exp_mild + 3*tickets_exp_strong,
             tickets_to_aggviol = sum(Tickets*Violence)/1000000,
-            tickets_to_aggexpviol = sum(Tickets*Exp_Violence)/1000000)
+            tickets_to_aggexpviol = sum(Tickets*Exp_Violence)/1000000,
+            ln_ttav = log1p(tickets_to_aggviol),
+            ln_ttaev = log1p(tickets_to_aggexpviol))
 ```
+
+Here, I check the distribution of the ```tickets_to_aggviol``` and ```tickets_to_aggexpviol``` variables (to demonstrate their strong right skew), and then compare those distributions to those of the variables logged.
+
+```{r}
+ggplot(daily_exposure, aes(x=tickets_to_aggviol)) +
+  geom_histogram(binwidth=5, color="coral4", fill="coral1") + 
+  labs(title="Distribution of Total Exposure to Actual Movie Violence",
+       y="Count",
+       x="Calculated Exposure to Actual Violence")
+ggplot(daily_exposure, aes(x=tickets_to_aggexpviol)) +
+  geom_histogram(binwidth=5, color="dodgerblue4", fill="dodgerblue1") + 
+  labs(title="Distribution of Total Exposure to Expectations of Movie Violence",
+       y="Count",
+       x="Calculated Exposure to Expected Violence")
+
+ggplot(daily_exposure, aes(x=ln_ttav)) +
+  geom_histogram(binwidth=0.5, color="coral4", fill="coral1") + 
+  labs(title="Distribution of Log of Total Exposure to Actual Movie Violence",
+       y="Count",
+       x="Log of Calculated Exposure to Actual Violence")
+ggplot(daily_exposure, aes(x=ln_ttaev)) +
+  geom_histogram(binwidth=0.5, color="dodgerblue4", fill="dodgerblue1") + 
+  labs(title="Distribution of Log of Total Exposure to Expectations of Movie Violence",
+       y="Count",
+       x="Log of Calculated Exposure to Expected Violence")
+```
+
 
 ## Exporting Data
 
